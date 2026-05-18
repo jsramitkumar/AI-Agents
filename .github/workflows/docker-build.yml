@@ -1,0 +1,47 @@
+name: Build & Push Docker Image
+
+on:
+  pull_request:
+    branches: ['**']
+
+jobs:
+  build-and-push:
+    name: Build and push to Docker Hub
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate timestamp tag (DDMMYYYY.HHMMSS)
+        id: tag
+        run: |
+          echo "ts=$(date -u +'%d%m%Y.%H%M%S')" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU (for cross-platform emulation)
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64,amd64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            jsrankit/wpmanager:latest
+            jsrankit/wpmanager:${{ steps.tag.outputs.ts }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
