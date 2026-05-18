@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment variables — never commit secrets
+.env
+.env.local
+.env.*.local
+
+# Next.js build output
+.next/
+out/
+
+# TypeScript incremental build info
+*.tsbuildinfo
+next-env.d.ts
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Prisma generated client (regenerated via `prisma generate`)
+prisma/generated/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+.idea/
+
+# Package manager lock files (keep package-lock.json, ignore others)
+yarn.lock
+pnpm-lock.yaml
