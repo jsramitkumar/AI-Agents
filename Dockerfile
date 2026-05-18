@@ -27,7 +27,7 @@ ENV NEXTAUTH_SECRET="build-time-placeholder"
 ENV NEXTAUTH_URL="http://localhost:3000"
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN npm run build
+RUN mkdir -p /app/public && npm run build
 
 # ── Stage 3: runner ───────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
