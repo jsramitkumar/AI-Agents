@@ -1,0 +1,89 @@
+name: wpmanager
+
+services:
+
+  # ── PostgreSQL — SaaS platform database ────────────────────────────────────
+  postgres:
+    image: arm64v8/postgres:16-alpine
+    container_name: wpmanager-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: wp_saas01
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d wp_saas01"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── MySQL — shared database host for WordPress instances ────────────────────
+  mysql:
+    image: arm64v8/mysql
+    container_name: wpmanager-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - wp-network
+      - internal
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-authentication-plugin=mysql_native_password
+
+  # ── WP Manager app ─────────────────────────────────────────────────────────
+  app:
+    image: jsrankit/wpmanager:latest
+    platform: linux/arm64
+    container_name: wpmanager-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      PORT: "3000"
+      NODE_ENV: production
+      DATABASE_URL: postgresql://admin:${POSTGRES_PASSWORD}@postgres:5432/wp_saas01
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?NEXTAUTH_SECRET is required}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:?NEXTAUTH_URL is required}
+      NEXTAUTH_URL_INTERNAL: http://localhost:3000
+      DOCKER_HOST: ${DOCKER_HOST:-tcp://host-gateway:2375}
+      DOCKER_WP_NETWORK: ${DOCKER_WP_NETWORK:-wp-network}
+      DOCKER_MYSQL_SERVICE: ${DOCKER_MYSQL_SERVICE:-mysql}
+      DOCKER_WP_IMAGE: ${DOCKER_WP_IMAGE:-wordpress:latest}
+      CRON_SECRET: ${CRON_SECRET:?CRON_SECRET is required}
+    networks:
+      - internal
+      - wp-network
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        npx prisma migrate deploy && node server.js
+
+volumes:
+  postgres_data:
+  mysql_data:
+
+networks:
+  internal:
+    driver: bridge
+    internal: true
+  wp-network:
+    name: ${DOCKER_WP_NETWORK:-wp-network}
+    driver: bridge
