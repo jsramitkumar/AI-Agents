@@ -23,7 +23,7 @@ services:
 
   # ── MySQL — shared database host for WordPress instances ────────────────────
   mysql:
-    image: arm64v8/mysql
+    image: arm64v8/mysql:8.0
     container_name: wpmanager-mysql
     restart: unless-stopped
     environment:
@@ -34,10 +34,11 @@ services:
       - wp-network
       - internal
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=${MYSQL_ROOT_PASSWORD}"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root --password=$$MYSQL_ROOT_PASSWORD"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 60s
     command: >
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
