@@ -50,7 +50,10 @@ COPY --from=deps /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
 # Copy the Prisma CLI so the entrypoint uses the pinned version instead of npx downloading latest
 COPY --from=deps /app/node_modules/prisma ./node_modules/prisma
-COPY --from=deps /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+# Create a symlink (not a copy) so __dirname resolves to node_modules/prisma/build/
+# and the co-located .wasm files are found correctly
+RUN mkdir -p /app/node_modules/.bin \
+ && ln -sf /app/node_modules/prisma/build/index.js /app/node_modules/.bin/prisma
 
 USER nextjs
 
